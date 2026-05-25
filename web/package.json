@@ -1,0 +1,30 @@
+{
+  "name": "texas-party-map",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "data": "node scripts/download-sources.mjs && python3.12 scripts/extract-texas-precincts.py && node scripts/build-city-data.mjs",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@turf/bbox": "^7.2.0",
+    "@turf/boolean-point-in-polygon": "^7.2.0",
+    "@turf/centroid": "^7.2.0",
+    "lucide-react": "^0.468.0",
+    "mapbox-gl": "^3.15.0",
+    "next": "^14.2.23",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.10",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.23",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "title": "Texas Party Support Map Methodology",
+  "geography": "Texas incorporated city boundaries",
+  "election": "2024 U.S. presidential general election",
+  "aggregation_method": "Assign each precinct to the city polygon containing its centroid, then sum Democratic and Republican votes.",
+  "limitations": [
+    "Texas has no official party registration by voter.",
+    "City-level support is an approximation because precinct boundaries do not perfectly align with city boundaries.",
+    "ZIP/ZCTA support is not included in v1 because election returns are not natively ZIP-based.",
+    "Cities with no assigned precinct centroid or low vote totals are marked Needs Review."
+  ],
+  "stats": {
+    "texas_precincts_seen": 9718,
+    "precincts_assigned_to_city": 5883,
+    "cities_total": 1224,
+    "cities_with_votes": 468
+  }
+}

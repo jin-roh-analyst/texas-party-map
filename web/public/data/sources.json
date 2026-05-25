@@ -1,0 +1,20 @@
+{
+  "generated_at": "2026-05-25T00:42:13.788Z",
+  "primary_support_metric": "2024 presidential Democratic/Republican major-party vote share",
+  "caveat": "Texas does not register voters by party; this is an election-return proxy, not official party registration.",
+  "sources": [
+    {
+      "label": "New York Times 2024 presidential precinct results and boundaries",
+      "url": "https://int.nyt.com/newsgraphics/elections/map-data/2024/national/precincts-with-results.topojson.gz"
+    },
+    {
+      "label": "Texas Geographic Information Office city boundaries",
+      "url": "https://feature.geographic.texas.gov/arcgis/rest/services/City_Boundaries/Texas_City_Boundaries/MapServer/0/query?where=1%3D1&outFields=*&f=geojson&returnGeometry=true&outSR=4326"
+    },
+    {
+      "label": "Texas Capitol Data Portal 2024 General VTD data",
+      "url": "https://data.capitol.texas.gov/topic/about/elections",
+      "note": "Preferred official refresh source when available. Site returned HTTP 503 during initial build attempt on 2026-05-25."
+    }
+  ]
+}
