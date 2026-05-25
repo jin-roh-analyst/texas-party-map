@@ -24,6 +24,29 @@ npm run dev
 
 Set `NEXT_PUBLIC_MAPBOX_TOKEN` in `web/.env.local`.
 
+## Vercel Deployment
+
+Deploy this repository through Vercel with:
+
+- Root Directory: `web`
+- Build Command: `npm run build`
+- Install Command: `npm install`
+- Output Directory: default Next.js setting
+
+Add this Vercel environment variable:
+
+```text
+NEXT_PUBLIC_MAPBOX_TOKEN=<your restricted Mapbox public token>
+```
+
+The Mapbox token is a browser token, so it will be visible to visitors. Create a token specifically for this project and restrict it in Mapbox to the deployed domains, for example:
+
+- `https://texas-party-map.vercel.app/*`
+- any custom production domain you add later
+- `http://localhost:3000/*` for local development, if needed
+
+Do not commit `web/.env.local`. It is intentionally ignored by git.
+
 ## Scripts
 
 - `npm run data`: downloads raw data and builds `web/public/data/cities.geojson`, `sources.json`, and `methodology.json`.
