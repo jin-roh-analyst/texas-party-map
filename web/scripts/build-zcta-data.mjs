@@ -1,4 +1,5 @@
 import { promises as fs } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import bbox from "@turf/bbox";
@@ -17,7 +18,7 @@ const cityBoundariesPath = resolve(rawDir, "texas-city-boundaries.geojson");
 const zctaZipPath = resolve(rawDir, "cb_2020_us_zcta520_500k.zip");
 const texasPrecinctsPath = resolve(processedDir, "texas-precincts.geojson");
 
-const CENSUS_YEAR = "2024";
+const CENSUS_YEARS = ["2024", "2023", "2022"];
 const DALLAS_NORTH_LAT = 32.7767;
 const DALLAS_OPEN_DATA_DOMAIN = "www.dallasopendata.com";
 const DALLAS_INCIDENTS_DATASET = "qv6i-rri7";
@@ -166,41 +167,84 @@ function dominantHousingEra(row) {
 }
 
 async function fetchJson(url, headers = {}) {
-  const response = await fetch(url, { headers });
-  if (!response.ok) {
-    throw new Error(`Request failed ${response.status}: ${url}`);
+  let text;
+
+  try {
+    const response = await fetch(url, { headers });
+    text = await response.text();
+    if (!response.ok) {
+      throw new Error(`Request failed ${response.status}: ${url}`);
+    }
+  } catch (error) {
+    const args = ["-fL", "-sS"];
+    for (const [key, value] of Object.entries(headers)) {
+      args.push("-H", `${key}: ${value}`);
+    }
+    args.push(String(url));
+
+    const result = spawnSync("curl", args, { encoding: "utf8" });
+    if (result.status !== 0) {
+      throw new Error(`${error.message}; curl fallback failed: ${result.stderr.trim() || `exit ${result.status}`}`);
+    }
+    text = result.stdout;
   }
-  return response.json();
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`Expected JSON but received: ${text.trim().slice(0, 80).replace(/\s+/g, " ")}`);
+  }
 }
 
-async function fetchAcsData() {
+async function fetchAcsRow(year, zcta) {
+  const url = new URL(`https://api.census.gov/data/${year}/acs/acs5`);
+  url.searchParams.set("get", ACS_VARIABLES.join(","));
+  url.searchParams.set("for", `zip code tabulation area:${zcta}`);
+  url.searchParams.set("key", process.env.CENSUS_API_KEY);
+
+  const rows = await fetchJson(url);
+  if (!Array.isArray(rows) || rows.length < 2) return null;
+
+  const headers = rows[0];
+  const values = rows[1];
+  return Object.fromEntries(headers.map((header, index) => [header, values[index]]));
+}
+
+async function fetchAcsData(zctas) {
   const key = process.env.CENSUS_API_KEY;
   if (!key) {
     console.warn("Missing CENSUS_API_KEY in web/.env.local; demographics and housing fields will be marked Needs Review.");
-    return new Map();
+    return { rows: new Map(), year: null };
   }
 
-  const url = new URL(`https://api.census.gov/data/${CENSUS_YEAR}/acs/acs5`);
-  url.searchParams.set("get", ACS_VARIABLES.join(","));
-  url.searchParams.set("for", "zip code tabulation area:*");
-  url.searchParams.set("key", key);
+  const uniqueZctas = [...new Set(zctas)].sort();
 
-  let rows;
-  try {
-    rows = await fetchJson(url);
-  } catch (error) {
-    console.warn(`Census ACS request failed; demographics and housing fields will be marked Needs Review. ${error.message}`);
-    return new Map();
+  for (const year of CENSUS_YEARS) {
+    const output = new Map();
+    let failures = 0;
+
+    for (const zcta of uniqueZctas) {
+      try {
+        const row = await fetchAcsRow(year, zcta);
+        if (row) output.set(zcta, row);
+      } catch (error) {
+        failures += 1;
+        if (failures <= 2) {
+          console.warn(`Census ACS ${year} failed for ${zcta}: ${error.message}`);
+        }
+      }
+    }
+
+    if (output.size > 0) {
+      if (failures > 0) {
+        console.warn(`Census ACS ${year}: mapped ${output.size}/${uniqueZctas.length} ZCTAs; ${failures} failed.`);
+      }
+      return { rows: output, year };
+    }
   }
-  const headers = rows[0];
-  const output = new Map();
 
-  for (const values of rows.slice(1)) {
-    const row = Object.fromEntries(headers.map((header, index) => [header, values[index]]));
-    output.set(row["zip code tabulation area"], row);
-  }
-
-  return output;
+  console.warn("Census ACS requests failed for all configured years; demographics and housing fields will be marked Needs Review.");
+  return { rows: new Map(), year: null };
 }
 
 async function fetchDallasCrimeData(year) {
@@ -255,10 +299,9 @@ async function main() {
   await readEnvFile(resolve(webRoot, ".env.local"));
   await Promise.all([fs.mkdir(processedDir, { recursive: true }), fs.mkdir(publicDir, { recursive: true })]);
 
-  const [citiesRaw, precinctCollection, acsRows, crimeByZip] = await Promise.all([
+  const [citiesRaw, precinctCollection, crimeByZip] = await Promise.all([
     fs.readFile(cityBoundariesPath, "utf8").then(JSON.parse),
     fs.readFile(texasPrecinctsPath, "utf8").then(JSON.parse),
-    fetchAcsData(),
     fetchDallasCrimeData(new Date().getFullYear() - 1)
   ]);
 
@@ -336,6 +379,9 @@ async function main() {
     bbox: bbox(zcta),
     feature: zcta
   }));
+
+  const acsResult = await fetchAcsData(selectedZctas.map((feature) => feature.properties.zcta));
+  const acsRows = acsResult.rows;
 
   let assignedPrecincts = 0;
   for (const precinct of precinctCollection.features.filter((item) => item.geometry)) {
@@ -440,8 +486,8 @@ async function main() {
     sources: [
       {
         label: "U.S. Census ACS 5-year ZCTA data",
-        url: `https://api.census.gov/data/${CENSUS_YEAR}/acs/acs5`,
-        note: "Used for demographics and housing construction era."
+        url: `https://api.census.gov/data/${acsResult.year ?? CENSUS_YEARS[0]}/acs/acs5`,
+        note: `Used for demographics and housing construction era${acsResult.year ? ` (${acsResult.year} ACS 5-year)` : ""}.`
       },
       {
         label: "U.S. Census 2020 ZCTA cartographic boundaries",
