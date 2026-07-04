@@ -1,18 +1,21 @@
 {
-  "title": "Texas Party Support Map Methodology",
-  "geography": "Texas incorporated city boundaries",
+  "title": "North Dallas ZIP Intelligence Map Methodology",
+  "geography": "Census ZIP Code Tabulation Areas intersecting selected North Dallas corridor cities",
   "election": "2024 U.S. presidential general election",
-  "aggregation_method": "Assign each precinct to the city polygon containing its centroid, then sum Democratic and Republican votes.",
+  "aggregation_method": "Assign each precinct centroid to a ZCTA polygon, then sum Democratic and Republican votes.",
   "limitations": [
-    "Texas has no official party registration by voter.",
-    "City-level support is an approximation because precinct boundaries do not perfectly align with city boundaries.",
-    "ZIP/ZCTA support is not included in v1 because election returns are not natively ZIP-based.",
-    "Cities with no assigned precinct centroid or low vote totals are marked Needs Review."
+    "ZCTAs are Census approximations of ZIP delivery areas, not exact USPS ZIP boundaries.",
+    "Texas has no official party registration by voter; political support is an election-return proxy.",
+    "Dominant housing era is the ACS year-built bin with the largest share of housing units, not a town founding date.",
+    "Dallas safety metrics come from reported incident records and preliminary classifications that may change.",
+    "Suburb safety metrics are marked Needs Review until official ZIP-level incident feeds are integrated."
   ],
   "stats": {
+    "zctas_total": 92,
+    "zctas_with_votes": 90,
+    "zctas_with_demographics": 0,
+    "zctas_with_safety": 0,
     "texas_precincts_seen": 9718,
-    "precincts_assigned_to_city": 5883,
-    "cities_total": 1224,
-    "cities_with_votes": 468
+    "precincts_assigned_to_zcta": 1110
   }
 }

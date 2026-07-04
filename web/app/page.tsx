@@ -2,13 +2,33 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import mapboxgl, { type MapLayerMouseEvent } from "mapbox-gl";
-import { AlertTriangle, BarChart3, ExternalLink, Info, MapPin, Search } from "lucide-react";
-import type { CityFeature, CityProperties, MethodologyDocument, SourcesDocument } from "../lib/types";
+import {
+  AlertTriangle,
+  BarChart3,
+  ExternalLink,
+  Home as HomeIcon,
+  Info,
+  MapPin,
+  Search,
+  Shield,
+  Users,
+  type LucideIcon
+} from "lucide-react";
+import type { MethodologyDocument, SourcesDocument, ZipFeature, ZipProperties } from "../lib/types";
 
-const TEXAS_CENTER: [number, number] = [-99.9018, 31.9686];
-const FILL_LAYER_ID = "city-support-fill";
-const LINE_LAYER_ID = "city-support-line";
-const SOURCE_ID = "cities";
+const NORTH_DALLAS_CENTER: [number, number] = [-96.78, 33.05];
+const FILL_LAYER_ID = "zip-intelligence-fill";
+const LINE_LAYER_ID = "zip-intelligence-line";
+const SOURCE_ID = "zips";
+
+type LayerMode = "politics" | "safety" | "housing" | "demographics";
+
+const layerOptions: Array<{ id: LayerMode; label: string; icon: LucideIcon }> = [
+  { id: "politics", label: "Political", icon: BarChart3 },
+  { id: "safety", label: "Safety", icon: Shield },
+  { id: "housing", label: "Housing", icon: HomeIcon },
+  { id: "demographics", label: "Demographics", icon: Users }
+];
 
 function percent(value: number | null) {
   if (value === null || Number.isNaN(value)) return "Needs Review";
@@ -26,13 +46,97 @@ function formatNumber(value: number | null | undefined) {
   return Number(value).toLocaleString();
 }
 
+function formatMoney(value: number | null | undefined) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "Needs Review";
+  return `$${Number(value).toLocaleString()}`;
+}
+
+function formatRate(value: number | null | undefined) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "Needs Review";
+  return `${Number(value).toLocaleString()} / 100k`;
+}
+
 function winnerClass(winner: string) {
   if (winner === "Democratic") return "dem";
   if (winner === "Republican") return "rep";
   return "review";
 }
 
-function getPaintExpression() {
+function paintExpression(mode: LayerMode) {
+  if (mode === "safety") {
+    return [
+      "case",
+      ["!=", ["get", "safety_status"], "Needs Review"],
+      [
+        "interpolate",
+        ["linear"],
+        ["coalesce", ["get", "violent_crime_rate_per_100k"], 0],
+        0,
+        "#ecfdf5",
+        300,
+        "#a7f3d0",
+        700,
+        "#facc15",
+        1200,
+        "#f97316",
+        2000,
+        "#991b1b"
+      ],
+      "#9ca3af"
+    ];
+  }
+
+  if (mode === "housing") {
+    return [
+      "match",
+      ["get", "dominant_housing_era"],
+      "2020 or later",
+      "#0f766e",
+      "2010 to 2019",
+      "#14b8a6",
+      "2000 to 2009",
+      "#22c55e",
+      "1990 to 1999",
+      "#84cc16",
+      "1980 to 1989",
+      "#eab308",
+      "1970 to 1979",
+      "#f59e0b",
+      "1960 to 1969",
+      "#f97316",
+      "1950 to 1959",
+      "#ea580c",
+      "1940 to 1949",
+      "#c2410c",
+      "1939 or earlier",
+      "#7c2d12",
+      "#9ca3af"
+    ];
+  }
+
+  if (mode === "demographics") {
+    return [
+      "case",
+      ["!=", ["get", "demographics_status"], "Needs Review"],
+      [
+        "interpolate",
+        ["linear"],
+        ["coalesce", ["get", "population"], 0],
+        0,
+        "#f8fafc",
+        10000,
+        "#c7d2fe",
+        30000,
+        "#818cf8",
+        60000,
+        "#4f46e5",
+        100000,
+        "#312e81"
+      ],
+      "#9ca3af"
+    ];
+  }
+
   return [
     "case",
     ["==", ["get", "winner"], "Democratic"],
@@ -67,15 +171,61 @@ function getPaintExpression() {
   ];
 }
 
-function HoverCard({ city }: { city: CityProperties | null }) {
-  if (!city) {
+function legend(mode: LayerMode) {
+  if (mode === "safety") {
+    return (
+      <>
+        <span className="swatch safety-low" />
+        <span>Lower rate</span>
+        <span className="swatch safety-high" />
+        <span>Higher rate</span>
+      </>
+    );
+  }
+
+  if (mode === "housing") {
+    return (
+      <>
+        <span className="swatch housing-new" />
+        <span>Newer</span>
+        <span className="swatch housing-old" />
+        <span>Older</span>
+      </>
+    );
+  }
+
+  if (mode === "demographics") {
+    return (
+      <>
+        <span className="swatch pop-low" />
+        <span>Lower pop.</span>
+        <span className="swatch pop-high" />
+        <span>Higher pop.</span>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <span className="swatch rep-strong" />
+      <span>R +25</span>
+      <span className="swatch neutral" />
+      <span>Even</span>
+      <span className="swatch dem-strong" />
+      <span>D +25</span>
+    </>
+  );
+}
+
+function ZipCard({ zip }: { zip: ZipProperties | null }) {
+  if (!zip) {
     return (
       <aside className="hover-card empty">
         <MapPin size={20} />
         <div>
-          <p className="eyebrow">Hover a city</p>
-          <h2>Texas support rates</h2>
-          <p>Move across the map to inspect 2024 presidential support by city.</p>
+          <p className="eyebrow">Hover a ZIP</p>
+          <h2>North Dallas ZIP intelligence</h2>
+          <p>Move across the map to inspect political support, safety, housing era, and demographics by ZCTA.</p>
         </div>
       </aside>
     );
@@ -85,45 +235,94 @@ function HoverCard({ city }: { city: CityProperties | null }) {
     <aside className="hover-card">
       <div className="card-header">
         <div>
-          <p className="eyebrow">City support profile</p>
-          <h2>{city.city_name}</h2>
+          <p className="eyebrow">ZCTA profile</p>
+          <h2>{zip.zcta}</h2>
+          <p className="subline">{zip.city_names.join(" / ") || "Needs Review"}</p>
         </div>
-        <span className={`winner ${winnerClass(city.winner)}`}>{city.winner}</span>
+        <span className={`winner ${winnerClass(zip.winner)}`}>{zip.winner}</span>
       </div>
 
       <div className="share-grid">
         <div className="share-card dem">
           <span>Democratic</span>
-          <strong>{percent(city.dem_share)}</strong>
-          <small>{formatNumber(city.dem_votes)} votes</small>
+          <strong>{percent(zip.dem_share)}</strong>
+          <small>{formatNumber(zip.dem_votes)} votes</small>
         </div>
         <div className="share-card rep">
           <span>Republican</span>
-          <strong>{percent(city.rep_share)}</strong>
-          <small>{formatNumber(city.rep_votes)} votes</small>
+          <strong>{percent(zip.rep_share)}</strong>
+          <small>{formatNumber(zip.rep_votes)} votes</small>
         </div>
       </div>
 
       <dl className="details">
         <div>
           <dt>Margin</dt>
-          <dd>{signedPercent(city.margin)}</dd>
+          <dd>{signedPercent(zip.margin)}</dd>
         </div>
         <div>
-          <dt>Major-party votes</dt>
-          <dd>{formatNumber(city.total_major_party_votes)}</dd>
+          <dt>Population</dt>
+          <dd>{formatNumber(zip.population)}</dd>
         </div>
         <div>
-          <dt>Assigned precincts</dt>
-          <dd>{formatNumber(city.precincts_assigned)}</dd>
+          <dt>Dominant housing era</dt>
+          <dd>{zip.dominant_housing_era ?? "Needs Review"}</dd>
         </div>
         <div>
-          <dt>Data status</dt>
-          <dd>{city.needs_review ? "Needs Review" : "Mapped"}</dd>
+          <dt>Era share</dt>
+          <dd>{percent(zip.dominant_housing_era_share)}</dd>
+        </div>
+        <div>
+          <dt>Median household income</dt>
+          <dd>{formatMoney(zip.median_household_income)}</dd>
+        </div>
+        <div>
+          <dt>Median age</dt>
+          <dd>{formatNumber(zip.median_age)}</dd>
         </div>
       </dl>
 
-      <p className="method-note">{city.aggregation_method}</p>
+      <div className="metric-band">
+        <div>
+          <span>Violent rate</span>
+          <strong>{formatRate(zip.violent_crime_rate_per_100k)}</strong>
+        </div>
+        <div>
+          <span>Robbery</span>
+          <strong>{formatNumber(zip.robbery_count)}</strong>
+        </div>
+        <div>
+          <span>Homicide</span>
+          <strong>{formatNumber(zip.homicide_count)}</strong>
+        </div>
+        <div>
+          <span>Shooting/firearm</span>
+          <strong>{formatNumber(zip.shooting_count)}</strong>
+        </div>
+      </div>
+
+      <dl className="details compact">
+        <div>
+          <dt>Hispanic</dt>
+          <dd>{percent(zip.hispanic_share)}</dd>
+        </div>
+        <div>
+          <dt>Asian NH</dt>
+          <dd>{percent(zip.asian_non_hispanic_share)}</dd>
+        </div>
+        <div>
+          <dt>Black NH</dt>
+          <dd>{percent(zip.black_non_hispanic_share)}</dd>
+        </div>
+        <div>
+          <dt>White NH</dt>
+          <dd>{percent(zip.white_non_hispanic_share)}</dd>
+        </div>
+      </dl>
+
+      <p className="method-note">
+        Safety: {zip.safety_status}. Politics: {zip.politics_status}. Demographics: {zip.demographics_status}.
+      </p>
     </aside>
   );
 }
@@ -142,28 +341,26 @@ function MethodologyPanel({
         <h2>Methodology</h2>
       </div>
       <p>
-        Texas does not publish party-registration counts because voters do not register by party.
-        This map uses 2024 presidential election returns as a support-rate proxy.
+        ZIPs are represented by Census ZCTAs. Political support uses 2024 presidential precinct returns, while
+        safety coverage is mapped only where official ZIP-level incident data is available.
       </p>
       {methodology && (
         <div className="method-grid">
           <div>
-            <span>Geography</span>
-            <strong>{methodology.geography}</strong>
+            <span>ZCTAs</span>
+            <strong>{formatNumber(methodology.stats.zctas_total)}</strong>
           </div>
           <div>
-            <span>Election</span>
-            <strong>{methodology.election}</strong>
+            <span>With safety</span>
+            <strong>{formatNumber(methodology.stats.zctas_with_safety)}</strong>
           </div>
           <div>
-            <span>Cities with votes</span>
-            <strong>
-              {methodology.stats.cities_with_votes.toLocaleString()} / {methodology.stats.cities_total.toLocaleString()}
-            </strong>
+            <span>With votes</span>
+            <strong>{formatNumber(methodology.stats.zctas_with_votes)}</strong>
           </div>
           <div>
             <span>Precincts assigned</span>
-            <strong>{methodology.stats.precincts_assigned_to_city.toLocaleString()}</strong>
+            <strong>{formatNumber(methodology.stats.precincts_assigned_to_zcta)}</strong>
           </div>
         </div>
       )}
@@ -191,36 +388,43 @@ function MethodologyPanel({
 export default function Home() {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
-  const [cities, setCities] = useState<GeoJSON.FeatureCollection<GeoJSON.Geometry, CityProperties> | null>(null);
+  const [zips, setZips] = useState<GeoJSON.FeatureCollection<GeoJSON.Geometry, ZipProperties> | null>(null);
   const [sources, setSources] = useState<SourcesDocument | null>(null);
   const [methodology, setMethodology] = useState<MethodologyDocument | null>(null);
-  const [hoveredCity, setHoveredCity] = useState<CityProperties | null>(null);
+  const [hoveredZip, setHoveredZip] = useState<ZipProperties | null>(null);
   const [query, setQuery] = useState("");
+  const [mode, setMode] = useState<LayerMode>("politics");
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
   useEffect(() => {
     Promise.all([
-      fetch("/data/cities.geojson").then((response) => response.json()),
+      fetch("/data/zips.geojson").then((response) => response.json()),
       fetch("/data/sources.json").then((response) => response.json()),
       fetch("/data/methodology.json").then((response) => response.json())
-    ]).then(([cityData, sourceData, methodologyData]) => {
-      setCities(cityData);
+    ]).then(([zipData, sourceData, methodologyData]) => {
+      setZips(zipData);
       setSources(sourceData);
       setMethodology(methodologyData);
     });
   }, []);
 
   useEffect(() => {
-    if (!mapContainer.current || !cities || !token || mapRef.current) return;
+    const map = mapRef.current;
+    if (!map || !map.getLayer(FILL_LAYER_ID)) return;
+    map.setPaintProperty(FILL_LAYER_ID, "fill-color", paintExpression(mode) as mapboxgl.Expression);
+  }, [mode]);
+
+  useEffect(() => {
+    if (!mapContainer.current || !zips || !token || mapRef.current) return;
 
     mapboxgl.accessToken = token;
     const map = new mapboxgl.Map({
       container: mapContainer.current,
       style: "mapbox://styles/mapbox/light-v11",
-      center: TEXAS_CENTER,
-      zoom: 5.2,
-      minZoom: 4.6,
-      maxZoom: 12
+      center: NORTH_DALLAS_CENTER,
+      zoom: 8.7,
+      minZoom: 7.2,
+      maxZoom: 13
     });
 
     map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), "top-right");
@@ -228,7 +432,7 @@ export default function Home() {
     map.on("load", () => {
       map.addSource(SOURCE_ID, {
         type: "geojson",
-        data: cities
+        data: zips
       });
 
       map.addLayer({
@@ -236,12 +440,12 @@ export default function Home() {
         type: "fill",
         source: SOURCE_ID,
         paint: {
-          "fill-color": getPaintExpression() as mapboxgl.Expression,
+          "fill-color": paintExpression(mode) as mapboxgl.Expression,
           "fill-opacity": [
             "case",
             ["==", ["get", "needs_review"], true],
-            0.25,
-            0.72
+            0.58,
+            0.76
           ] as mapboxgl.Expression
         }
       });
@@ -252,16 +456,22 @@ export default function Home() {
         source: SOURCE_ID,
         paint: {
           "line-color": "#ffffff",
-          "line-opacity": 0.55,
-          "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.25, 9, 1.2] as mapboxgl.Expression
+          "line-opacity": 0.75,
+          "line-width": ["interpolate", ["linear"], ["zoom"], 7, 0.45, 11, 1.4] as mapboxgl.Expression
         }
       });
 
       map.on("mousemove", FILL_LAYER_ID, (event: MapLayerMouseEvent) => {
         map.getCanvas().style.cursor = "pointer";
-        const feature = event.features?.[0] as CityFeature | undefined;
+        const feature = event.features?.[0] as ZipFeature | undefined;
         if (feature?.properties) {
-          setHoveredCity(feature.properties);
+          const parsed = {
+            ...feature.properties,
+            city_names: Array.isArray(feature.properties.city_names)
+              ? feature.properties.city_names
+              : JSON.parse(String(feature.properties.city_names ?? "[]"))
+          };
+          setHoveredZip(parsed);
         }
       });
 
@@ -276,76 +486,84 @@ export default function Home() {
       map.remove();
       mapRef.current = null;
     };
-  }, [cities, token]);
+  }, [zips, token, mode]);
 
   const searchResults = useMemo(() => {
-    if (!cities || query.trim().length < 2) return [];
+    if (!zips || query.trim().length < 2) return [];
     const normalized = query.trim().toLowerCase();
-    return cities.features
-      .filter((feature) => feature.properties.city_name.toLowerCase().includes(normalized))
-      .sort((a, b) => (b.properties.total_major_party_votes ?? 0) - (a.properties.total_major_party_votes ?? 0))
+    return zips.features
+      .filter((feature) => feature.properties.search_label.toLowerCase().includes(normalized))
+      .sort((a, b) => (b.properties.population ?? 0) - (a.properties.population ?? 0))
       .slice(0, 8);
-  }, [cities, query]);
+  }, [zips, query]);
 
-  function flyToCity(city: CityFeature) {
-    setHoveredCity(city.properties);
-    const geometry = city.geometry;
-    if (!mapRef.current || !geometry) return;
-    const cityBox = city.geometry ? cityBbox(city) : null;
-    if (cityBox) {
-      mapRef.current.fitBounds(cityBox, {
-        padding: 90,
-        duration: 900,
-        maxZoom: 10
-      });
-    }
+  function flyToZip(zip: ZipFeature) {
+    setHoveredZip(zip.properties);
+    const zipBox = featureBbox(zip);
+    if (!mapRef.current || !zipBox) return;
+    mapRef.current.fitBounds(zipBox, {
+      padding: 90,
+      duration: 900,
+      maxZoom: 11
+    });
   }
 
   return (
     <main className="app-shell">
       <section className="hero">
         <div>
-          <p className="eyebrow">Texas 2024 presidential returns</p>
-          <h1>City-level party support map</h1>
+          <p className="eyebrow">North Dallas corridor</p>
+          <h1>ZIP intelligence map</h1>
           <p>
-            Explore Democratic and Republican major-party vote share across incorporated Texas cities.
-            Results are aggregated from precinct returns and shown as a support-rate proxy.
+            Explore political support, safety indicators, housing-era signals, and demographics across North Dallas
+            and surrounding suburbs. ZIPs are represented by Census ZCTAs.
           </p>
         </div>
         <div className="hero-stat">
           <BarChart3 size={20} />
-          <span>{methodology ? `${methodology.stats.cities_with_votes.toLocaleString()} cities mapped` : "Loading cities"}</span>
+          <span>{methodology ? `${formatNumber(methodology.stats.zctas_total)} ZCTAs mapped` : "Loading ZCTAs"}</span>
         </div>
       </section>
 
       <section className="workspace">
         <div className="map-panel">
           <div className="map-toolbar">
-            <div className="search-box">
-              <Search size={17} />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search city"
-                aria-label="Search city"
-              />
+            <div className="toolbar-left">
+              <div className="search-box">
+                <Search size={17} />
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search ZIP or city"
+                  aria-label="Search ZIP or city"
+                />
+              </div>
+              <div className="layer-tabs" aria-label="Map layer">
+                {layerOptions.map((option) => {
+                  const Icon = option.icon;
+                  return (
+                    <button
+                      key={option.id}
+                      className={mode === option.id ? "active" : ""}
+                      onClick={() => setMode(option.id)}
+                      type="button"
+                    >
+                      <Icon size={15} />
+                      <span>{option.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="legend">
-              <span className="swatch rep-strong" />
-              <span>R +25</span>
-              <span className="swatch neutral" />
-              <span>Even</span>
-              <span className="swatch dem-strong" />
-              <span>D +25</span>
-            </div>
+            <div className="legend">{legend(mode)}</div>
           </div>
 
           {searchResults.length > 0 && (
             <div className="search-results">
-              {searchResults.map((city) => (
-                <button key={city.properties.geoid} onClick={() => flyToCity(city)}>
-                  <span>{city.properties.city_name}</span>
-                  <small>{signedPercent(city.properties.margin)}</small>
+              {searchResults.map((zip) => (
+                <button key={zip.properties.zcta} onClick={() => flyToZip(zip)}>
+                  <span>{zip.properties.zcta}</span>
+                  <small>{zip.properties.city_names.join(" / ")}</small>
                 </button>
               ))}
             </div>
@@ -355,9 +573,7 @@ export default function Home() {
             <div className="token-warning">
               <AlertTriangle size={24} />
               <h2>Mapbox token required</h2>
-              <p>
-                Add `NEXT_PUBLIC_MAPBOX_TOKEN` to `web/.env.local`, then restart the dev server.
-              </p>
+              <p>Add `NEXT_PUBLIC_MAPBOX_TOKEN` to `web/.env.local`, then restart the dev server.</p>
             </div>
           ) : (
             <div ref={mapContainer} className="map-canvas" />
@@ -365,7 +581,7 @@ export default function Home() {
         </div>
 
         <div className="side-panel">
-          <HoverCard city={hoveredCity} />
+          <ZipCard zip={hoveredZip} />
           <MethodologyPanel methodology={methodology} sources={sources} />
         </div>
       </section>
@@ -373,9 +589,9 @@ export default function Home() {
   );
 }
 
-function cityBbox(city: CityFeature): [[number, number], [number, number]] | null {
+function featureBbox(feature: ZipFeature): [[number, number], [number, number]] | null {
   const coords: number[][] = [];
-  const geometry = city.geometry;
+  const geometry = feature.geometry;
 
   if (geometry.type !== "Polygon" && geometry.type !== "MultiPolygon") return null;
 

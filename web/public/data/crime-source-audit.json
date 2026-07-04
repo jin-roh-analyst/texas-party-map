@@ -1,0 +1,111 @@
+{
+  "generated_at": "2026-07-04T16:38:30.272Z",
+  "safety_metric_year": 2025,
+  "sources": [
+    {
+      "city": "Dallas",
+      "status": "Mapped",
+      "source": "Dallas Police Public Data - RMS Incidents",
+      "url": "https://www.dallasopendata.com/resource/qv6i-rri7.json",
+      "note": "Grouped by reported ZIP code and classified from NIBRS/UCR/offense/weapon fields."
+    },
+    {
+      "city": "Addison",
+      "status": "Needs Review",
+      "source": null,
+      "url": null,
+      "note": "No official ZIP-level incident feed has been integrated yet. Do not interpret missing counts as zero crime."
+    },
+    {
+      "city": "Allen",
+      "status": "Needs Review",
+      "source": null,
+      "url": null,
+      "note": "No official ZIP-level incident feed has been integrated yet. Do not interpret missing counts as zero crime."
+    },
+    {
+      "city": "Carrollton",
+      "status": "Needs Review",
+      "source": null,
+      "url": null,
+      "note": "No official ZIP-level incident feed has been integrated yet. Do not interpret missing counts as zero crime."
+    },
+    {
+      "city": "Coppell",
+      "status": "Needs Review",
+      "source": null,
+      "url": null,
+      "note": "No official ZIP-level incident feed has been integrated yet. Do not interpret missing counts as zero crime."
+    },
+    {
+      "city": "Farmers Branch",
+      "status": "Needs Review",
+      "source": null,
+      "url": null,
+      "note": "No official ZIP-level incident feed has been integrated yet. Do not interpret missing counts as zero crime."
+    },
+    {
+      "city": "Frisco",
+      "status": "Needs Review",
+      "source": null,
+      "url": null,
+      "note": "No official ZIP-level incident feed has been integrated yet. Do not interpret missing counts as zero crime."
+    },
+    {
+      "city": "Garland",
+      "status": "Needs Review",
+      "source": null,
+      "url": null,
+      "note": "No official ZIP-level incident feed has been integrated yet. Do not interpret missing counts as zero crime."
+    },
+    {
+      "city": "Lewisville",
+      "status": "Needs Review",
+      "source": null,
+      "url": null,
+      "note": "No official ZIP-level incident feed has been integrated yet. Do not interpret missing counts as zero crime."
+    },
+    {
+      "city": "McKinney",
+      "status": "Needs Review",
+      "source": null,
+      "url": null,
+      "note": "No official ZIP-level incident feed has been integrated yet. Do not interpret missing counts as zero crime."
+    },
+    {
+      "city": "Murphy",
+      "status": "Needs Review",
+      "source": null,
+      "url": null,
+      "note": "No official ZIP-level incident feed has been integrated yet. Do not interpret missing counts as zero crime."
+    },
+    {
+      "city": "Plano",
+      "status": "Needs Review",
+      "source": null,
+      "url": null,
+      "note": "No official ZIP-level incident feed has been integrated yet. Do not interpret missing counts as zero crime."
+    },
+    {
+      "city": "Richardson",
+      "status": "Needs Review",
+      "source": null,
+      "url": null,
+      "note": "No official ZIP-level incident feed has been integrated yet. Do not interpret missing counts as zero crime."
+    },
+    {
+      "city": "The Colony",
+      "status": "Needs Review",
+      "source": null,
+      "url": null,
+      "note": "No official ZIP-level incident feed has been integrated yet. Do not interpret missing counts as zero crime."
+    },
+    {
+      "city": "Wylie",
+      "status": "Needs Review",
+      "source": null,
+      "url": null,
+      "note": "No official ZIP-level incident feed has been integrated yet. Do not interpret missing counts as zero crime."
+    }
+  ]
+}

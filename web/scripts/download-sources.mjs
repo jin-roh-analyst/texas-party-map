@@ -18,6 +18,11 @@ const sources = [
     label: "Texas Geographic Information Office city boundaries",
     url: "https://feature.geographic.texas.gov/arcgis/rest/services/City_Boundaries/Texas_City_Boundaries/MapServer/0/query?where=1%3D1&outFields=*&f=geojson&returnGeometry=true&outSR=4326",
     local: resolve(rawDir, "texas-city-boundaries.geojson")
+  },
+  {
+    label: "U.S. Census 2020 ZCTA cartographic boundary shapefile",
+    url: "https://www2.census.gov/geo/tiger/GENZ2020/shp/cb_2020_us_zcta520_500k.zip",
+    local: resolve(rawDir, "cb_2020_us_zcta520_500k.zip")
   }
 ];
 
