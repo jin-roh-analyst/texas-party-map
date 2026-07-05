@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-07-05T01:18:11.958Z",
+  "generated_at": "2026-07-05T01:25:50.505Z",
   "primary_support_metric": "2024 presidential Democratic/Republican major-party vote share by ZCTA",
   "caveat": "ZCTAs approximate ZIP code areas. Safety coverage is strongest for Dallas Police incident data and is marked Needs Review elsewhere.",
   "sources": [
     {
       "label": "U.S. Census ACS 5-year ZCTA data",
       "url": "https://api.census.gov/data/2024/acs/acs5",
-      "note": "Used for demographics and housing construction era."
+      "note": "Used for demographics and housing construction era (2024 ACS 5-year)."
     },
     {
       "label": "U.S. Census 2020 ZCTA cartographic boundaries",
